@@ -6,31 +6,41 @@ args = commandArgs(T)
 if(length(args)>1)
 {
   qfn = args[1]
-  winsize = args[2]
+  idxfn = args[2]
+  winsize = args[3]
+  idx = args[4]
 }else
 {
   qfn = 'sz800.csv'
   idxfn = 'index.csv'
-  idx = 1
   winsize = 252
+  idx = 1
 }
 
-quote = read.csv(qfn, stringsAsFactors=F)
-quote.zoo = zoo(quote[,-1], order.by=as.Date(quote[,1]))
-
-# NOTE: divide between zoo object is automatically merged to common indexes.
+quote = read.zoo(qfn, stringsAsFactors=F, header=T, sep=',')
+index = read.zoo(idxfn, stringsAsFactors=F, header=T, sep=',')
 
 # clean quote series: fill 0 with most recent non-zeros
-quote.zoo[which(quote.zoo==0)] = NA
-quote.zoo = na.locf(quote.zoo)
+alldata = merge(index, quote, all=F)
+alldata[which(alldata==0)] = NA
+alldata = na.locf(alldata)
 
-# quote -> daily return
-ret.zoo = diff(log(quote.zoo))
+test.coint <- function(x, ind=1)
+{
+  pvalues = rep(0, NCOL(x)-1)
+  testcol = setdiff(1:NCOL(x), ind)
+  for(i in 1:length(testcol))
+  {
+    c = testcol[i]
+    ratio = as.vector(x[,c]/x[,ind])
+    tr = adf.test(ratio, alternative="stationary")
+    pvalues[i] = tr$p.value
+  }
+  return(pvalues)
+}
 
 # calc volatility
-vol.zoo = rollapplyr(ret.zoo, width=winsize, FUN=sd, fill=NA)
-
-adf.test(sprd, alternative="stationary", k=0)
+pvalues = rollapplyr(ret.zoo, width=winsize, FUN=test.coint, fill=NA, by.column=F)
 
 # how many NA in each timestamps
 na.count = apply(is.na(vol.zoo), 1, sum)
