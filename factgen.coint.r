@@ -21,7 +21,7 @@ quote = read.zoo(qfn, stringsAsFactors=F, header=T, sep=',')
 index = read.zoo(idxfn, stringsAsFactors=F, header=T, sep=',')
 
 # clean quote series: fill 0 with most recent non-zeros
-alldata = merge(index, quote, all=F)
+alldata = merge(quote, index[,idx], all=F)
 alldata[which(alldata==0)] = NA
 alldata = na.locf(alldata)
 
@@ -33,20 +33,26 @@ test.coint <- function(x, ind=1)
   {
     c = testcol[i]
     ratio = as.vector(x[,c]/x[,ind])
-    tr = adf.test(ratio, alternative="stationary")
-    pvalues[i] = tr$p.value
+    tr = try(adf.test(ratio, alternative="stationary"), silent=T)
+    if(is(tr)=='try-error')
+    {
+      pvalues[i] = NA
+    }else{
+      pvalues[i] = tr$p.value
+    }
   }
+  print(c(NROW(x), index(x)[1]))
   return(pvalues)
 }
 
 # calc volatility
-pvalues = rollapplyr(ret.zoo, width=winsize, FUN=test.coint, fill=NA, by.column=F)
+pvalues = rollapplyr(alldata, width=winsize, FUN=test.coint, fill=NA, by.column=F)
 
 # how many NA in each timestamps
-na.count = apply(is.na(vol.zoo), 1, sum)
-vol.out = vol.zoo[which(na.count!=NCOL(vol.zoo)),]
+na.count = apply(is.na(pvalues), 1, sum)
+vol.out = pvalues[which(na.count!=NCOL(pvalues)),]
 
 # if NA in vol.zoo, it means history quote is not long enough
 # if 0 in vol.zoo, it means the price is really steady in the range
 
-write.zoo(vol.out, file='sz800.vol.csv', sep=',')
+write.zoo(pvalues, file='sz800.coint.csv', sep=',')
