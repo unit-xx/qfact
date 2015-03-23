@@ -21,7 +21,7 @@ quote = read.zoo(qfn, stringsAsFactors=F, header=T, sep=',')
 index = read.zoo(idxfn, stringsAsFactors=F, header=T, sep=',')
 
 # clean quote series: fill 0 with most recent non-zeros
-alldata = merge(quote, index[,idx], all=F)
+alldata = merge(index[,idx], quote, all=F)
 alldata[which(alldata==0)] = NA
 alldata = na.locf(alldata)
 
@@ -41,7 +41,7 @@ test.coint <- function(x, ind=1)
       pvalues[i] = tr$p.value
     }
   }
-  print(c(NROW(x), index(x)[1]))
+  #print(c(NROW(x), index(x)[1]))
   return(pvalues)
 }
 
@@ -50,9 +50,9 @@ pvalues = rollapplyr(alldata, width=winsize, FUN=test.coint, fill=NA, by.column=
 
 # how many NA in each timestamps
 na.count = apply(is.na(pvalues), 1, sum)
-vol.out = pvalues[which(na.count!=NCOL(pvalues)),]
+pvalues.out = pvalues[which(na.count!=NCOL(pvalues)),]
 
 # if NA in vol.zoo, it means history quote is not long enough
 # if 0 in vol.zoo, it means the price is really steady in the range
 
-write.zoo(pvalues, file='sz800.coint.csv', sep=',')
+write.zoo(pvalues.out, file='sz800.coint.csv', sep=',')
