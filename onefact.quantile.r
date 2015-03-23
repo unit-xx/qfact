@@ -10,7 +10,7 @@ if(length(args)>1)
 }else
 {
   qfn = 'sz800.csv'
-  factfn = 'sz800.vol.csv'
+  factfn = 'sz800.coint.csv'
   # rebalance frequency
   freq = 20
   # number of quantiles
@@ -81,4 +81,4 @@ qcol = rainbow(quantN+5)
 plot(fact.perf, plot.type='s', col=qcol)
 legend('topleft', title='quantiles', as.character(1:quantN), col=qcol, lty=1, lwd=2)
 
-
+dev.print(pdf, file='coint.pdf')
